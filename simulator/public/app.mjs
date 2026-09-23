@@ -382,8 +382,8 @@ function analyze() {
   };
   $('ai-button').disabled = busy || !aiAvailable;
   $('ai-status').textContent = aiAvailable
-    ? 'AI объяснит проверенные сервером расчёты.'
-    : 'OpenAI пока не подключён. Для локального запуска добавьте OPENAI_API_KEY в .env; для сайта — в секреты сервера.';
+    ? 'AI поможет понять результаты вашего сценария.'
+    : 'AI-объяснение пока недоступно. Вы можете воспользоваться автоматическим разбором выше.';
 }
 $('filters').onclick = (e) => {
   const b = e.target.closest('[data-filter]');

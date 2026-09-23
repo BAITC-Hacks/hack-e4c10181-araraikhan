@@ -84,7 +84,7 @@ export async function handleApi(request, env = {}, fetcher = fetch) {
     return json(
       {
         error:
-          'OpenAI не подключён. Добавьте OPENAI_API_KEY на сервере. Автоматический разбор доступен без ключа.',
+          'AI-объяснение пока недоступно. Воспользуйтесь автоматическим разбором сценария.',
       },
       503,
     );

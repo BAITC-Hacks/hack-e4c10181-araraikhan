@@ -26,6 +26,18 @@ test('ignores tampered scores and sends authoritative facts to model', async () 
       assert.ok(Math.abs(facts.result.score - 56.54307) < 1e-8);
       assert.equal(body.store, false);
       assert.equal(body.model, 'test-model');
+      assert.equal(facts.readingGuide.score, '56,54');
+      assert.equal(facts.readingGuide.scoreChange, '3,99');
+      const school = facts.readingGuide.needsAttention.find((c) => c.district === 'Нура' && c.code === 'S1');
+      assert.equal(school.value, 48);
+      assert.equal(school.critical, false);
+      assert.deepEqual(facts.readingGuide.resolvedCritical.map((c) => c.code), ['S1', 'S2']);
+      const rail = facts.checkedSingleReplacements.find((c) => c.add.id === 'M3');
+      assert.match(rail.label.add, /Линия ЛРТ.*Нура/);
+      assert.match(rail.label.remove, /чистое топливо.*Сарыарка/);
+      const lostAirBenefit = rail.changesComparedWithCurrent.find((c) => c.district === 'Сарыарка' && c.indicator === 'E2');
+      assert.equal(lostAirBenefit.delta, -8.75);
+      assert.equal(lostAirBenefit.after, 40);
       return Response.json({
         status: 'completed',
         output: [
@@ -80,4 +92,6 @@ test('event is validated and forwarded to the model with the shocked start', asy
   assert.equal(response.status, 200);
   assert.equal(facts.result.event.id, 'EV1');
   assert.ok(facts.result.start.score < facts.baseline.score);
+  assert.equal(facts.readingGuide.scoreChange,
+    (facts.result.score - facts.result.start.score).toLocaleString('ru-RU', { maximumFractionDigits: 2 }));
 });

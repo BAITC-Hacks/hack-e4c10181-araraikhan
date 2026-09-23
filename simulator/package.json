@@ -2,6 +2,15 @@
   "name": "akim-city-simulator",
   "private": true,
   "type": "module",
-  "engines": {"node": ">=22"},
-  "scripts": {"dev": "node --env-file-if-exists=.env server.mjs", "start": "node --env-file-if-exists=.env server.mjs", "test": "node --test tests/*.test.mjs", "build": "node build.mjs"}
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env server.mjs",
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "build": "node build.mjs",
+    "format": "npx --yes prettier@3 --write \"*.mjs\" \"public/*\" \"tests/*\"",
+    "lint": "npx --yes prettier@3 --check \"*.mjs\" \"public/*\" \"tests/*\""
+  }
 }

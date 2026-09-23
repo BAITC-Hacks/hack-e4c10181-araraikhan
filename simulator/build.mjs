@@ -6,6 +6,8 @@ const files = {
   '/app.mjs': ['app.mjs', 'text/javascript; charset=utf-8'],
   '/engine.mjs': ['engine.mjs', 'text/javascript; charset=utf-8'],
   '/icons.mjs': ['icons.mjs', 'text/javascript; charset=utf-8'],
+  '/scenarios.mjs': ['scenarios.mjs', 'text/javascript; charset=utf-8'],
+  '/scenario-worker.mjs': ['scenario-worker.mjs', 'text/javascript; charset=utf-8'],
 };
 const assets = {};
 for (const [url, [file, type]] of Object.entries(files))

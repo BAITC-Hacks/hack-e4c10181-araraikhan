@@ -33,7 +33,11 @@
             <li><span>2</span>Смотрите, что изменилось</li>
             <li><span>3</span>Получите разбор AI</li>
           </ol>
-          <button id="example" class="button hero-button">Попробовать пример <span>↗</span></button>
+          <div class="hero-actions">
+            <button id="example" class="button hero-button" title="Новый случайный сценарий с учётом выбранного события">Попробовать пример <span>↗</span></button>
+            <button id="best-scenario" class="button hero-button" title="Найти максимальный Score с учётом выбранного события">Лучший сценарий <span>★</span></button>
+          </div>
+          <p id="scenario-status" class="scenario-status" role="status" aria-live="polite"></p>
         </div>
         <svg
           class="skyline"

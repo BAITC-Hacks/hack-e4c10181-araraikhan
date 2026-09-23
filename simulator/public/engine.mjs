@@ -1,4 +1,10 @@
 export const H = 8;
+// First measure targets a district; the second is city-wide. Bonuses ignore lag.
+export const synergyPairs = [
+  ['M1', 'M2', 'T1', 2],
+  ['M10', 'M12', 'B1', 2],
+  ['M5', 'M6', 'E2', 2],
+];
 export const BUDGET = 100;
 export const indicators = [
   ['T1', 'Разгрузка дорог', 0.1],
@@ -241,11 +247,7 @@ export function simulate(selections, { partial = false, event = null } = {}) {
       realized,
     });
   }
-  for (const [a, b, k, v] of [
-    ['M1', 'M2', 'T1', 2],
-    ['M10', 'M12', 'B1', 2],
-    ['M5', 'M6', 'E2', 2],
-  ]) {
+  for (const [a, b, k, v] of synergyPairs) {
     const first = selections.find((s) => s.id === a);
     if (first && selections.some((s) => s.id === b)) {
       const d = districts.findIndex((d) => d.id === first.district);

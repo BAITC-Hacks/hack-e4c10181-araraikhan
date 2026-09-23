@@ -301,6 +301,24 @@ h3 {
   line-height: 1.45;
   margin: 10px 0 0;
 }
+.synergy-hint {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #edf8ef;
+  color: #23603b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.synergy-hint.active {
+  background: #dff2e4;
+}
+.synergy-hint small {
+  color: #386348;
+  font-size: 12px;
+}
 .scenario {
   background: var(--navy);
   color: white;
@@ -991,6 +1009,19 @@ svg.i {
   color: var(--b900);
   border-color: var(--sun-yellow);
   font-weight: 600;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.hero .scenario-status {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+.scenario-status:empty {
+  display: none;
 }
 .hero-button:hover {
   background: var(--sun-yellow-hover);

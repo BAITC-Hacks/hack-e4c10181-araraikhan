@@ -3,7 +3,6 @@ import {
   indicators,
   measures,
   areas,
-  example,
   validate,
   simulate,
   explain,
@@ -14,8 +13,10 @@ import {
   coveredAreas,
   presentation,
   baseline,
+  synergyPairs,
 } from './engine.mjs';
 import { icon, areaIcons, indicatorInfo, measureIcons } from './icons.mjs';
+import { randomScenario } from './scenarios.mjs';
 const $ = (id) => document.getElementById(id);
 const fmt = (x) =>
   x.toLocaleString('ru-RU', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
@@ -26,6 +27,14 @@ let selections = [],
   aiAvailable = false,
   busy = false,
   event = null;
+let searchWorker = null;
+function stopSearch() {
+  searchWorker?.terminate();
+  searchWorker = null;
+  $('best-scenario').textContent = 'Лучший сценарий ★';
+  $('best-scenario').setAttribute('aria-busy', 'false');
+  $('scenario-status').textContent = '';
+}
 // Scenarios saved for side-by-side comparison (teams sharing one screen at the demo).
 const saved = [];
 const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -128,6 +137,23 @@ function render() {
   $('matrix').innerHTML =
     `<caption class="fine">Показатели районов через 8 кварталов · значения 0–100 · в скобках изменение к базе</caption><thead><tr><th>Район</th>${indicators.map(([k, name, w]) => `<th><span class="th-icon">${icon(indicatorInfo[k].icon)}</span><abbr title="${name}; вес ${short(w * 100)}%">${k}</abbr></th>`).join('')}</tr></thead><tbody>${districts.map((d, i) => `<tr><th>${d.name}</th>${r.rows[i].map((v, k) => `<td class="${v < 40 ? 'cell-critical' : v < 50 ? 'cell-attention' : v > start.rows[i][k] ? 'cell-improved' : ''}" title="${indicators[k][1]}${v < 40 ? ": критическое значение, штраф 1 балл" : v < 50 ? ": рекомендуется улучшить, ниже 50" : ""}">${short(v)}${v !== start.rows[i][k] ? `<small>(${v > start.rows[i][k] ? '+' : ''}${short(v - start.rows[i][k])})</small>` : ''}</td>`).join('')}</tr>`).join('')}</tbody>`;
 }
+function synergyHint(m) {
+  const pair = synergyPairs.find(([a, b]) => m.id === a || m.id === b);
+  if (!pair) return '';
+  const [a, b, code, bonus] = pair;
+  const first = selections.find((s) => s.id === a);
+  const second = selections.find((s) => s.id === b);
+  if (!first && !second) return '';
+  const districtId = first?.district || targets[a];
+  const district = districts.find((d) => d.id === districtId).name;
+  const name = indicators.find(([k]) => k === code)[1];
+  const active = first && second;
+  const blocked = validate(selections, { partial: true, event }).length > 0;
+  const heading = active
+    ? blocked ? 'Бонус пары после исправления сценария' : 'Синергия активна'
+    : `Добавьте ${first ? b : a} — получите бонус`;
+  return `<div class="synergy-hint${active ? ' active' : ''}"><strong>${heading}</strong><span>${a} + ${b}: ${code} · ${name} <b>+${bonus}</b> — ${district}.</span><small>Дополнительно к эффектам мер, без уменьшения за лаг.</small></div>`;
+}
 function measureCard(m) {
   const selected = selections.some((s) => s.id === m.id),
     candidate = { id: m.id, ...(m.scope === 'district' ? { district: targets[m.id] } : {}) };
@@ -155,6 +181,7 @@ function measureCard(m) {
     ${scope}
     <div class="measure-bottom"><span class="price">${icon('coin')}${m.cost} <small>ед.</small></span><button class="add-button" data-add="${m.id}" ${errors.length ? 'disabled' : ''}>${selected ? '✓ Выбрано' : '+ Добавить'}</button></div>
     ${errors.length ? `<p class="blocked-reason">${errors[0]}</p>` : ''}
+    ${synergyHint(m)}
   </article>`;
 }
 const short1 = (x) =>
@@ -193,6 +220,7 @@ function renderEvent() {
       ].join(' · ')}</span>`;
 }
 function setEvent(id) {
+  stopSearch();
   event = findEvent(id)?.id ?? null;
   revision++;
   busy = false;
@@ -203,6 +231,7 @@ function update(next) {
   const errors = validate(next, { partial: true, event });
   // Removing a measure is always allowed, even while an event keeps the set over budget.
   if (errors.length && next.length >= selections.length) throw Error(errors.join(' '));
+  stopSearch();
   selections = next;
   selections.forEach((s) => {
     if (s.district) targets[s.id] = s.district;
@@ -383,7 +412,45 @@ $('selected').onclick = (e) => {
   const b = e.target.closest('[data-remove]');
   if (b) update(selections.filter((s) => s.id !== b.dataset.remove));
 };
-$('example').onclick = () => update(example.map((s) => ({ ...s })));
+$('example').onclick = () => {
+  update(randomScenario({ event, exclude: selections }));
+  $('scenario-status').textContent = 'Новый случайный сценарий: 5 мер, бюджет и ограничения соблюдены.';
+};
+$('best-scenario').onclick = () => {
+  if (searchWorker) {
+    stopSearch();
+    $('scenario-status').textContent = 'Поиск отменён. Ваш сценарий сохранён.';
+    return;
+  }
+  $('scenario-status').textContent = 'Ищем максимальный Score для текущего события. Это может занять несколько секунд…';
+  $('best-scenario').textContent = 'Отменить поиск';
+  $('best-scenario').setAttribute('aria-busy', 'true');
+  const fail = (message) => {
+    stopSearch();
+    $('scenario-status').textContent = message;
+  };
+  try {
+    const worker = new Worker(new URL('./scenario-worker.mjs', import.meta.url), { type: 'module' });
+    searchWorker = worker;
+    worker.onmessage = ({ data }) => {
+      if (searchWorker !== worker) return;
+      if (data.type === 'progress') {
+        $('scenario-status').textContent = `Ищем лучший сценарий… Проверено ${data.evaluated.toLocaleString('ru-RU')} вариантов.`;
+      } else if (data.type === 'result') {
+        update(data.result.selections);
+        $('scenario-status').textContent = `Лучший сценарий выбран: Score ${fmt(data.result.score)}. Проверены все ${data.result.evaluated.toLocaleString('ru-RU')} допустимых вариантов для ${event ? 'выбранного события' : 'режима без события'}.`;
+      } else if (data.type === 'error') {
+        fail(`Не удалось завершить поиск: ${data.message}`);
+      }
+    };
+    worker.onerror = () => {
+      if (searchWorker === worker) fail('Не удалось запустить поиск. Обновите страницу и попробуйте ещё раз.');
+    };
+    worker.postMessage({ event });
+  } catch {
+    fail('Не удалось запустить поиск. Обновите страницу и попробуйте ещё раз.');
+  }
+};
 $('event-select').innerHTML =
   '<option value="">Без события</option>' +
   events.map((e) => `<option value="${e.id}">${e.id}. ${e.title}</option>`).join('');
